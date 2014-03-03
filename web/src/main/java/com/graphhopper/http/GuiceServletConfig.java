@@ -63,7 +63,7 @@ public class GuiceServletConfig extends GuiceServletContextListener
                         + "application/javascript,"
                         + "image/svg+xml");
 
-                filter("/*").through(MyGZIPHook.class, params);
+                // filter("/*").through(MyGZIPHook.class, params);
                 bind(MyGZIPHook.class).in(Singleton.class);
 
                 serve("/api/i18n*").with(I18NServlet.class);
