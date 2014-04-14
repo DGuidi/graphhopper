@@ -34,6 +34,7 @@ import com.graphhopper.storage.GHDirectory;
 import com.graphhopper.storage.Graph;
 import com.graphhopper.storage.LevelGraph;
 import com.graphhopper.storage.LevelGraphStorage;
+import com.graphhopper.storage.NodeAccess;
 import com.graphhopper.util.*;
 import java.util.*;
 import org.slf4j.Logger;
@@ -55,7 +56,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
 {
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private final PreparationWeighting prepareWeighting;
-    private final FlagEncoder prepareEncoder;
+    private final FlagEncoder prepareFlagEncoder;
     private EdgeSkipExplorer vehicleInExplorer;
     private EdgeSkipExplorer vehicleOutExplorer;
     private EdgeSkipExplorer vehicleAllExplorer;
@@ -66,9 +67,6 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
     private GHTreeMapComposed sortedNodes;
     private int oldPriorities[];
     private final DataAccess originalEdges;
-    // shortcut is one direction, speed is only involved while recalculating the endNode weights - see prepareEdges
-    private final long scFwdDir;
-    private final long scBothDir;
     private final Map<Shortcut, Shortcut> shortcuts = new HashMap<Shortcut, Shortcut>();
     private IgnoreNodeFilter ignoreNodeFilter;
     private DijkstraOneToMany algo;
@@ -88,12 +86,11 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
 
     public PrepareContractionHierarchies( FlagEncoder encoder, Weighting weighting )
     {
-        prepareEncoder = encoder;
-        scFwdDir = encoder.setAccess(0, true, false);
-        scBothDir = encoder.setAccess(0, true, true);
+        prepareFlagEncoder = encoder;
+        long scFwdDir = encoder.setAccess(0, true, false);
 
         // shortcuts store weight in flags where we assume bit 1 and 2 are used for access restriction
-        if ((scFwdDir & 0x1) == 0)
+        if ((scFwdDir & PrepareEncoder.getScFwdDir()) == 0)
             throw new IllegalArgumentException("Currently only one vehicle is supported if you enable CH. "
                     + "It seems that you have imported more than one.");
 
@@ -107,22 +104,6 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
     {
         this.g = (LevelGraph) g;
         return this;
-    }
-
-    /**
-     * A long with only the two access bits enabled
-     */
-    long getScBothDir()
-    {
-        return scBothDir;
-    }
-
-    /**
-     * A long with only the forward access bit enabled
-     */
-    long getScFwdDir()
-    {
-        return scFwdDir;
     }
 
     /**
@@ -202,7 +183,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
     public PrepareContractionHierarchies doWork()
     {
         checkGraph();
-        if (prepareEncoder == null)
+        if (prepareFlagEncoder == null)
             throw new IllegalStateException("No vehicle encoder set.");
 
         if (prepareWeighting == null)
@@ -224,9 +205,6 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
 
     boolean prepareEdges()
     {
-        // In CH the setProperties (speed) are ignored as calculating the new setProperties for a shortcut is often not possible.
-        // Also several shortcuts would be necessary with the different modes (e.g. fastest and shortest)
-        // So calculate the weight and store this as weight, then use only weight instead of calcWeight
         EdgeIterator iter = g.getAllEdges();
         int c = 0;
         while (iter.next())
@@ -385,7 +363,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
         logger.info("took:" + (int) allSW.stop().getSeconds()
                 + ", new shortcuts: " + newShortcuts
                 + ", " + prepareWeighting
-                + ", " + prepareEncoder
+                + ", " + prepareFlagEncoder
                 + ", removeHigher2LowerEdges:" + removesHigher2LowerEdges
                 + ", dijkstras:" + dijkstraCount
                 + ", t(dijk):" + (int) dijkstraSW.getSeconds()
@@ -483,18 +461,19 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
             // Hint: shortcuts are always one-way due to distinct level of every node but we don't
             // know yet the levels so we need to determine the correct direction or if both directions
             // minor improvement: if (shortcuts.containsKey(sc) 
-            // then two shortcuts with the same nodes (u<->n.endNode) exists => check current shortcut against both
+            // then two shortcuts with the same nodes (u<->n.adjNode) exists => check current shortcut against both
             Shortcut sc = new Shortcut(u_fromNode, w_toNode, existingDirectWeight, existingDistSum);
             if (shortcuts.containsKey(sc))
-            {
                 return;
-            } else
+
+            Shortcut tmpSc = new Shortcut(w_toNode, u_fromNode, existingDirectWeight, existingDistSum);
+            Shortcut tmpRetSc = shortcuts.get(tmpSc);
+            if (tmpRetSc != null)
             {
-                Shortcut tmpSc = new Shortcut(w_toNode, u_fromNode, existingDirectWeight, existingDistSum);
-                Shortcut tmpRetSc = shortcuts.get(tmpSc);
-                if (tmpRetSc != null)
+                // overwrite flags only if skipped edges are identical
+                if (tmpRetSc.skippedEdge2 == skippedEdge1 && tmpRetSc.skippedEdge1 == outgoingEdges.getEdge())
                 {
-                    tmpRetSc.flags = scBothDir;
+                    tmpRetSc.flags = PrepareEncoder.getScDirMask();
                     return;
                 }
             }
@@ -513,20 +492,20 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
     }
 
     /**
-     * Calculates the priority of endNode v without changing the graph. Warning: the calculated
+     * Calculates the priority of adjNode v without changing the graph. Warning: the calculated
      * priority must NOT depend on priority(v) and therefor findShortcuts should also not depend on
      * the priority(v). Otherwise updating the priority before contracting in contractNodes() could
      * lead to a slowishor even endless loop.
      */
     int calculatePriority( int v )
     {
-        // set of shortcuts that would be added if endNode v would be contracted next.
+        // set of shortcuts that would be added if adjNode v would be contracted next.
         findShortcuts(calcScHandler.setNode(v));
 
 //        System.out.println(v + "\t " + tmpShortcuts);
         // # huge influence: the bigger the less shortcuts gets created and the faster is the preparation
         //
-        // every endNode has an 'original edge' number associated. initially it is r=1
+        // every adjNode has an 'original edge' number associated. initially it is r=1
         // when a new shortcut is introduced then r of the associated edges is summed up:
         // r(u,w)=r(u,v)+r(v,w) now we can define
         // originalEdgesCount = σ(v) := sum_{ (u,w) ∈ shortcuts(v) } of r(u, w)
@@ -553,7 +532,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
         // # low influence: with it the shortcut creation is slightly faster
         //
         // |shortcuts(v)| − |{(u, v) | v uncontracted}| − |{(v, w) | v uncontracted}|        
-        // meanDegree is used instead of outDegree+inDegree as if one endNode is in both directions
+        // meanDegree is used instead of outDegree+inDegree as if one adjNode is in both directions
         // only one bucket memory is used. Additionally one shortcut could also stand for two directions.
         int edgeDifference = calcScHandler.shortcuts - degree;
 
@@ -597,6 +576,11 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
                 // If we decrease the correct weight we only explore less and introduce more shortcuts.
                 // I.e. no change to accuracy is made.
                 double existingDirectWeight = v_u_weight + prepareWeighting.calcWeight(outgoingEdges, false);
+                if (Double.isNaN(existingDirectWeight))
+                    throw new IllegalStateException("Weighting should never return NaN values"
+                            + ", in:" + getCoords(incomingEdges, g) + ", out:" + getCoords(outgoingEdges, g)
+                            + ", dist:" + outgoingEdges.getDistance() + ", speed:" + prepareFlagEncoder.getSpeed(outgoingEdges.getFlags()));
+
                 if (existingDirectWeight >= Double.MAX_VALUE)
                     continue;
                 double existingDistSum = v_u_dist + outgoingEdges.getDistance();
@@ -629,7 +613,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
     }
 
     /**
-     * Introduces the necessary shortcuts for endNode v in the graph.
+     * Introduces the necessary shortcuts for adjNode v in the graph.
      */
     int addShortcuts( int v )
     {
@@ -645,16 +629,27 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
             while (iter.next())
             {
                 if (iter.isShortcut() && iter.getAdjNode() == sc.to
-                        && prepareEncoder.canBeOverwritten(iter.getFlags(), sc.flags))
+                        && PrepareEncoder.canBeOverwritten(iter.getFlags(), sc.flags))
                 {
                     if (sc.weight >= prepareWeighting.calcWeight(iter, false))
                         continue NEXT_SC;
 
-                    // note: flags overwrite weight => call them first
+                    if (iter.getEdge() == sc.skippedEdge1 || iter.getEdge() == sc.skippedEdge2)
+                    {
+                        throw new IllegalStateException("Shortcut cannot update itself! " + iter.getEdge()
+                                + ", skipEdge1:" + sc.skippedEdge1 + ", skipEdge2:" + sc.skippedEdge2
+                                + ", edge " + iter + ":" + getCoords(iter, g)
+                                + ", sc:" + sc
+                                + ", skippedEdge1: " + getCoords(g.getEdgeProps(sc.skippedEdge1, sc.from), g)
+                                + ", skippedEdge2: " + getCoords(g.getEdgeProps(sc.skippedEdge2, sc.to), g)
+                                + ", neighbors:" + GHUtility.getNeighbors(iter));
+                    }
+
+                    // note: flags overwrite weight => call first
                     iter.setFlags(sc.flags);
-                    iter.setSkippedEdges(sc.skippedEdge1, sc.skippedEdge2);
-                    iter.setDistance(sc.dist);
                     iter.setWeight(sc.weight);
+                    iter.setDistance(sc.dist);
+                    iter.setSkippedEdges(sc.skippedEdge1, sc.skippedEdge2);
                     setOrigEdgeCount(iter.getEdge(), sc.originalEdges);
                     updatedInGraph = true;
                     break;
@@ -664,7 +659,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
             if (!updatedInGraph)
             {
                 EdgeSkipIterState edgeState = g.shortcut(sc.from, sc.to);
-                // note: flags overwrite weight => call them first
+                // note: flags overwrite weight => call first
                 edgeState.setFlags(sc.flags);
                 edgeState.setWeight(sc.weight);
                 edgeState.setDistance(sc.dist);
@@ -676,14 +671,23 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
         return tmpNewShortcuts;
     }
 
+    String getCoords( EdgeIteratorState e, Graph g )
+    {
+        NodeAccess na = g.getNodeAccess();
+        int base = e.getBaseNode();
+        int adj = e.getAdjNode();
+        return base + "->" + adj + " (" + e.getEdge() + "); "
+                + na.getLat(base) + "," + na.getLon(base) + " -> " + na.getLat(adj) + "," + na.getLon(adj);
+    }
+
     PrepareContractionHierarchies initFromGraph()
     {
         checkGraph();
-        vehicleInExplorer = g.createEdgeExplorer(new DefaultEdgeFilter(prepareEncoder, true, false));
-        vehicleOutExplorer = g.createEdgeExplorer(new DefaultEdgeFilter(prepareEncoder, false, true));
-        vehicleAllExplorer = g.createEdgeExplorer(new DefaultEdgeFilter(prepareEncoder, true, true));
-        vehicleAllTmpExplorer = g.createEdgeExplorer(new DefaultEdgeFilter(prepareEncoder, true, true));
-        calcPrioAllExplorer = g.createEdgeExplorer(new DefaultEdgeFilter(prepareEncoder, true, true));
+        vehicleInExplorer = g.createEdgeExplorer(new DefaultEdgeFilter(prepareFlagEncoder, true, false));
+        vehicleOutExplorer = g.createEdgeExplorer(new DefaultEdgeFilter(prepareFlagEncoder, false, true));
+        vehicleAllExplorer = g.createEdgeExplorer(new DefaultEdgeFilter(prepareFlagEncoder, true, true));
+        vehicleAllTmpExplorer = g.createEdgeExplorer(new DefaultEdgeFilter(prepareFlagEncoder, true, true));
+        calcPrioAllExplorer = g.createEdgeExplorer(new DefaultEdgeFilter(prepareFlagEncoder, true, true));
         ignoreNodeFilter = new IgnoreNodeFilter(g);
         // Use an alternative to PriorityQueue as it has some advantages: 
         //   1. Gets automatically smaller if less entries are stored => less total RAM used (as Graph is increasing until the end)
@@ -691,7 +695,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
         //   but we need additional priorities array to keep old value which is necessary for update method
         sortedNodes = new GHTreeMapComposed();
         oldPriorities = new int[g.getNodes()];
-        algo = new DijkstraOneToMany(g, prepareEncoder, prepareWeighting);
+        algo = new DijkstraOneToMany(g, prepareFlagEncoder, prepareWeighting);
         return this;
     }
 
@@ -719,7 +723,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
         @Override
         public final boolean accept( EdgeIteratorState iter )
         {
-            // ignore if it is skipNode or a endNode already contracted
+            // ignore if it is skipNode or a adjNode already contracted
             int node = iter.getAdjNode();
             return avoidNode != node && graph.getLevel(node) == 0;
         }
@@ -745,7 +749,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
     {
         checkGraph();
         // do not change weight within DijkstraBidirectionRef => so use ShortestWeighting
-        DijkstraBidirectionRef dijkstrabi = new DijkstraBidirectionRef(g, prepareEncoder, prepareWeighting)
+        DijkstraBidirectionRef dijkstrabi = new DijkstraBidirectionRef(g, prepareFlagEncoder, prepareWeighting)
         {
             @Override
             protected void initCollections( int nodes )
@@ -793,7 +797,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
     public AStarBidirection createAStar()
     {
         checkGraph();
-        AStarBidirection astar = new AStarBidirection(g, prepareEncoder, prepareWeighting)
+        AStarBidirection astar = new AStarBidirection(g, prepareFlagEncoder, prepareWeighting)
         {
             @Override
             protected void initCollections( int nodes )
@@ -878,7 +882,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
         double dist;
         double weight;
         int originalEdges;
-        long flags = scFwdDir;
+        long flags = PrepareEncoder.getScFwdDir();
 
         public Shortcut( int from, int to, double weight, double dist )
         {
@@ -914,9 +918,13 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation<Prepa
         @Override
         public String toString()
         {
-            if (flags == scBothDir)
-                return from + "<->" + to + ", weight:" + weight;
-            return from + "->" + to + ", weight:" + weight;
+            String str;
+            if (flags == PrepareEncoder.getScDirMask())
+                str = from + "<->";
+            else
+                str = from + "->";
+
+            return str + to + ", weight:" + weight + " (" + skippedEdge1 + "," + skippedEdge2 + ")";
         }
     }
 }

@@ -18,6 +18,7 @@
 package com.graphhopper.util;
 
 import java.util.List;
+import java.text.DecimalFormat;
 
 public class Instruction
 {
@@ -30,40 +31,41 @@ public class Instruction
     public static final int TURN_RIGHT = 2;
     public static final int TURN_SHARP_RIGHT = 3;
     public static final int FINISH = 4;
-    private final int indication;
+    public static final int REACHED_VIA = 5;
+    protected int sign;
     private final String name;
     private double distance;
-    private long millis;
+    private long time;
     final PointList points;
     private final int pavementType;
-    private final int waytype;
+    private final int wayType;
 
     /**
      * The points, distances and times have exactly the same count. The last point of this
      * instruction is not duplicated here and should be in the next one.
      */
-    public Instruction( int indication, String name, int waytype, int pavementType, PointList pl )
+    public Instruction( int sign, String name, int wayType, int pavementType, PointList pl )
     {
-        this.indication = indication;
+        this.sign = sign;
         this.name = name;
         this.points = pl;
-        this.waytype = waytype;
+        this.wayType = wayType;
         this.pavementType = pavementType;
     }
 
-    public int getPavement()
+    public int getPavementType()
     {
         return pavementType;
     }
 
     public int getWayType()
     {
-        return waytype;
+        return wayType;
     }
 
-    public int getIndication()
+    public int getSign()
     {
-        return indication;
+        return sign;
     }
 
     /**
@@ -88,18 +90,18 @@ public class Instruction
         return distance;
     }
 
-    public Instruction setMillis( long millis )
+    public Instruction setTime( long time )
     {
-        this.millis = millis;
+        this.time = time;
         return this;
     }
 
     /**
-     * Time in millis until no new instruction
+     * Time in time until no new instruction
      */
-    public long getMillis()
+    public long getTime()
     {
-        return millis;
+        return time;
     }
 
     /**
@@ -118,23 +120,19 @@ public class Instruction
         return points.getLongitude(0);
     }
 
-    double getLastLat()
+    public PointList getPoints()
     {
-        return points.getLatitude(points.size() - 1);
-    }
-
-    double getLastLon()
-    {
-        return points.getLongitude(points.size() - 1);
+        return points;
     }
 
     /**
-     * This method returns a list of gpx entries where the time (in millis) is relative to the first
+     * This method returns a list of gpx entries where the time (in time) is relative to the first
      * which is 0. It does NOT contain the last point which is the first of the next instruction.
      * <p>
      * @return the time offset to add for the next instruction
      */
-    long fillGPXList( List<GPXEntry> list, long time, double nextInstrLat, double nextInstrLon )
+    long fillGPXList( List<GPXEntry> list, long time,
+            Instruction prevInstr, Instruction nextInstr, boolean firstInstr )
     {
         checkOne();
         int len = points.size();
@@ -144,16 +142,16 @@ public class Instruction
         for (int i = 0; i < len; i++)
         {
             boolean last = i + 1 == len;
-            double nextLat = last ? nextInstrLat : points.getLatitude(i + 1);
-            double nextLon = last ? nextInstrLon : points.getLongitude(i + 1);
+            double nextLat = last ? nextInstr.getFirstLat() : points.getLatitude(i + 1);
+            double nextLon = last ? nextInstr.getFirstLon() : points.getLongitude(i + 1);
 
             list.add(new GPXEntry(lat, lon, prevTime));
             // TODO in the case of elevation data the air-line distance is probably not precise enough
-            prevTime = Math.round(prevTime + millis * distanceCalc.calcDist(nextLat, nextLon, lat, lon) / distance);
+            prevTime = Math.round(prevTime + this.time * distanceCalc.calcDist(nextLat, nextLon, lat, lon) / distance);
             lat = nextLat;
             lon = nextLon;
         }
-        return time + millis;
+        return time + this.time;
     }
 
     @Override
@@ -161,15 +159,75 @@ public class Instruction
     {
         StringBuilder sb = new StringBuilder();
         sb.append('(');
-        sb.append(indication);
+        sb.append(sign);
         sb.append(',');
         sb.append(name);
         sb.append(',');
         sb.append(distance);
         sb.append(',');
-        sb.append(millis);
+        sb.append(time);
         sb.append(')');
         return sb.toString();
+    }
+
+    /**
+     * Return Direction/Compass point based on the first tracksegment of the instruction. If
+     * Instruction does not contain enough coordinate points, NULL will be returned.
+     * <p>
+     * @return
+     */
+    String getDirection( Instruction nextI )
+    {
+        AngleCalc2D ac = new AngleCalc2D();
+        double azimuth = calcAzimuth(nextI);
+        if (Double.isNaN(azimuth))
+            return null;
+
+        String dir = ac.azimuth2compassPoint(azimuth);
+        return dir;
+    }
+
+    /**
+     * Return Azimuth based on the first tracksegment of the instruction. If Instruction does not
+     * contain enough coordinate points, NULL will be returned.
+     * <p>
+     * @return
+     */
+    String getAzimuth( Instruction nextI )
+    {
+        double az = calcAzimuth(nextI);
+        if (Double.isNaN(az))
+            return null;
+
+        DecimalFormat angleFormatter = new DecimalFormat("#");
+        return angleFormatter.format(az);
+    }
+
+    private double calcAzimuth( Instruction nextI )
+    {
+        double nextLat;
+        double nextLon;
+
+        if (points.getSize() >= 2)
+        {
+            nextLat = points.getLatitude(1);
+            nextLon = points.getLongitude(1);
+        } else if (points.getSize() == 1 && null != nextI)
+        {
+            nextLat = nextI.points.getLatitude(0);
+            nextLon = nextI.points.getLongitude(0);
+        } else
+        {
+            return Double.NaN;
+        }
+
+        double lat = points.getLatitude(0);
+        double lon = points.getLongitude(0);
+
+        AngleCalc2D ac = new AngleCalc2D();
+
+        double azimuth = ac.calcAzimuth(lat, lon, nextLat, nextLon);
+        return azimuth;
     }
 
     void checkOne()

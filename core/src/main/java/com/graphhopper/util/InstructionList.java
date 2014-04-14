@@ -19,11 +19,7 @@ package com.graphhopper.util;
 
 import java.text.SimpleDateFormat;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.TimeZone;
+import java.util.*;
 
 /**
  * List of instructions.
@@ -57,150 +53,116 @@ public class InstructionList implements Iterable<Instruction>
         return instructions.size();
     }
 
-    /**
-     * @return list of indications useful to create images
-     */
-    public List<Integer> createIndications()
-    {
-        List<Integer> res = new ArrayList<Integer>(instructions.size());
-        for (Instruction instruction : instructions)
-        {
-            res.add(instruction.getIndication());
-        }
-        return res;
-    }
-
-    public List<Double> createDistances()
-    {
-        List<Double> res = new ArrayList<Double>(instructions.size());
-        for (Instruction instruction : instructions)
-        {
-            res.add(instruction.getDistance());
-        }
-        return res;
-    }
-
     public List<String> createDistances( TranslationMap.Translation tr, boolean mile )
     {
-        List<Double> distances = createDistances();
-        List<String> labels = new ArrayList<String>(distances.size());
-        for (int i = 0; i < distances.size(); i++)
+        List<String> labels = new ArrayList<String>(instructions.size());
+        for (int i = 0; i < instructions.size(); i++)
         {
-            double distInMeter = distances.get(i);
+            double distInMeter = instructions.get(i).getDistance();
             if (mile)
             {
                 // calculate miles
                 double distInMiles = distInMeter / 1000 / DistanceCalcEarth.KM_MILE;
                 if (distInMiles < 0.9)
                 {
-                    labels.add((int) DistanceCalcEarth.round(distInMiles * 5280, 1) + " " + tr.tr("ftAbbr"));
+                    labels.add((int) round(distInMiles * 5280, 1) + " " + tr.tr("ftAbbr"));
                 } else
                 {
                     if (distInMiles < 100)
-                        labels.add(DistanceCalcEarth.round(distInMiles, 2) + " " + tr.tr("miAbbr"));
+                        labels.add(round(distInMiles, 2) + " " + tr.tr("miAbbr"));
                     else
-                        labels.add((int) DistanceCalcEarth.round(distInMiles, 1) + " " + tr.tr("miAbbr"));
+                        labels.add((int) round(distInMiles, 1) + " " + tr.tr("miAbbr"));
                 }
             } else
             {
                 if (distInMeter < 950)
                 {
-                    labels.add((int) DistanceCalcEarth.round(distInMeter, 1) + " " + tr.tr("mAbbr"));
+                    labels.add((int) round(distInMeter, 1) + " " + tr.tr("mAbbr"));
                 } else
                 {
                     distInMeter /= 1000;
                     if (distInMeter < 100)
-                        labels.add(DistanceCalcEarth.round(distInMeter, 2) + " " + tr.tr("kmAbbr"));
+                        labels.add(round(distInMeter, 2) + " " + tr.tr("kmAbbr"));
                     else
-                        labels.add((int) DistanceCalcEarth.round(distInMeter, 1) + " " + tr.tr("kmAbbr"));
+                        labels.add((int) round(distInMeter, 1) + " " + tr.tr("kmAbbr"));
                 }
             }
         }
         return labels;
     }
 
-    /**
-     * @return string representations of the times until no new instruction.
-     */
-    public List<Long> createMillis()
+    public List<Map<String, Object>> createJson( TranslationMap.Translation tr )
     {
-        List<Long> res = new ArrayList<Long>(instructions.size());
+        List<Map<String, Object>> instrList = new ArrayList<Map<String, Object>>(instructions.size());
+        int pointsIndex = 0;
+        int counter = 0;
         for (Instruction instruction : instructions)
         {
-            res.add(instruction.getMillis());
+            Map<String, Object> instrJson = new HashMap<String, Object>();
+            instrList.add(instrJson);
+
+            instrJson.put("text", Helper.firstBig(getTurnDescription(instruction, tr)));
+            instrJson.put("time", instruction.getTime());
+            instrJson.put("distance", instruction.getDistance());
+            instrJson.put("sign", instruction.getSign());
+
+            int tmpIndex = pointsIndex + instruction.getPoints().size();
+            // the last instruction should not point to the next instruction
+            if (counter + 1 == instructions.size())
+                tmpIndex--;
+
+            instrJson.put("interval", Arrays.asList(pointsIndex, tmpIndex));
+            pointsIndex = tmpIndex;
+
+            counter++;
         }
-        return res;
+        return instrList;
     }
 
-    /**
-     * @return the lat,lon positions at which the instructions have to be presented.
-     */
-    public List<List<Double>> createLatLngs()
+    private String getTurnDescription( Instruction instruction, TranslationMap.Translation tr )
     {
-        List<List<Double>> res = new ArrayList<List<Double>>();
-        for (Instruction instruction : instructions)
+        String str;
+        String n = getWayName(instruction.getName(), instruction.getPavementType(), instruction.getWayType(), tr);
+        int indi = instruction.getSign();
+        if (indi == Instruction.FINISH)
         {
-            List<Double> latLng = new ArrayList<Double>(2);
-            latLng.add(instruction.getFirstLat());
-            latLng.add(instruction.getFirstLon());
-            res.add(latLng);
-        }
-        return res;
-    }
-
-    public List<String> createDescription( TranslationMap.Translation tr )
-    {
-        String shLeftTr = tr.tr("sharp_left");
-        String shRightTr = tr.tr("sharp_right");
-        String slLeftTr = tr.tr("slight_left");
-        String slRightTr = tr.tr("slight_right");
-        String leftTr = tr.tr("left");
-        String rightTr = tr.tr("right");
-        String continueTr = tr.tr("continue");
-        List<String> res = new ArrayList<String>(instructions.size());
-        for (Instruction instruction : instructions)
+            str = tr.tr("finish");
+        } else if (indi == Instruction.REACHED_VIA)
         {
-            String str;
-            String n = getWayName(instruction.getName(), instruction.getPavement(), instruction.getWayType(), tr);
-            int indi = instruction.getIndication();
-            if (indi == Instruction.FINISH)
+            str = tr.tr("stopover", ((FinishInstruction) instruction).getViaPosition());
+        } else if (indi == Instruction.CONTINUE_ON_STREET)
+        {
+            str = Helper.isEmpty(n) ? tr.tr("continue") : tr.tr("continue_onto", n);
+        } else
+        {
+            String dir = null;
+            switch (indi)
             {
-                str = tr.tr("finish");
-            } else if (indi == Instruction.CONTINUE_ON_STREET)
-            {
-                str = Helper.isEmpty(n) ? continueTr : tr.tr("continue_onto", n);
-            } else
-            {
-                String dir = null;
-                switch (indi)
-                {
-                    case Instruction.TURN_SHARP_LEFT:
-                        dir = shLeftTr;
-                        break;
-                    case Instruction.TURN_LEFT:
-                        dir = leftTr;
-                        break;
-                    case Instruction.TURN_SLIGHT_LEFT:
-                        dir = slLeftTr;
-                        break;
-                    case Instruction.TURN_SLIGHT_RIGHT:
-                        dir = slRightTr;
-                        break;
-                    case Instruction.TURN_RIGHT:
-                        dir = rightTr;
-                        break;
-                    case Instruction.TURN_SHARP_RIGHT:
-                        dir = shRightTr;
-                        break;
-                }
-                if (dir == null)
-                    throw new IllegalStateException("Indication not found " + indi);
-
-                str = Helper.isEmpty(n) ? tr.tr("turn", dir) : tr.tr("turn_onto", dir, n);
+                case Instruction.TURN_SHARP_LEFT:
+                    dir = tr.tr("sharp_left");
+                    break;
+                case Instruction.TURN_LEFT:
+                    dir = tr.tr("left");
+                    break;
+                case Instruction.TURN_SLIGHT_LEFT:
+                    dir = tr.tr("slight_left");
+                    break;
+                case Instruction.TURN_SLIGHT_RIGHT:
+                    dir = tr.tr("slight_right");
+                    break;
+                case Instruction.TURN_RIGHT:
+                    dir = tr.tr("right");
+                    break;
+                case Instruction.TURN_SHARP_RIGHT:
+                    dir = tr.tr("sharp_right");
+                    break;
             }
-            res.add(Helper.firstBig(str));
+            if (dir == null)
+                throw new IllegalStateException("Indication not found " + indi);
+
+            str = Helper.isEmpty(n) ? tr.tr("turn", dir) : tr.tr("turn_onto", dir, n);
         }
-        return res;
+        return str;
     }
 
     public boolean isEmpty()
@@ -226,8 +188,9 @@ public class InstructionList implements Iterable<Instruction>
     }
 
     /**
-     * This method returns a list of gpx entries where the time (in millis) is relative to the first
-     * which is 0.
+     * @return This method returns a list of gpx entries where the time (in millis) is relative to
+     * the first which is 0.
+     * <p>
      */
     public List<GPXEntry> createGPXList()
     {
@@ -238,11 +201,12 @@ public class InstructionList implements Iterable<Instruction>
         long timeOffset = 0;
         for (int i = 0; i < size() - 1; i++)
         {
+            Instruction prevInstr = (i > 0) ? get(i - 1) : null;
+            boolean instrIsFirst = prevInstr == null;
             Instruction nextInstr = get(i + 1);
-            nextInstr.checkOne();            
+            nextInstr.checkOne();
             // current instruction does not contain last point which is equals to first point of next instruction:
-            double nextLat = nextInstr.getFirstLat(), nextLon = nextInstr.getFirstLon();            
-            timeOffset = get(i).fillGPXList(gpxList, timeOffset, nextLat, nextLon);
+            timeOffset = get(i).fillGPXList(gpxList, timeOffset, prevInstr, nextInstr, instrIsFirst);
         }
         Instruction lastI = get(size() - 1);
         if (lastI.points.size() != 1)
@@ -275,15 +239,39 @@ public class InstructionList implements Iterable<Instruction>
                 + "</metadata>";
         StringBuilder track = new StringBuilder(header);
         track.append("<trk><name>").append(trackName).append("</name>");
+
         track.append("<trkseg>");
         for (GPXEntry entry : createGPXList())
         {
-            track.append("<trkpt lat='").append(entry.getLat()).append("' lon='").append(entry.getLon()).append("'>");
+            track.append("\n<trkpt lat='").append(entry.getLat()).append("' lon='").append(entry.getLon()).append("'>");
             track.append("<time>").append(tzHack(formatter.format(startTimeMillis + entry.getMillis()))).append("</time>");
             track.append("</trkpt>");
         }
         track.append("</trkseg>");
-        track.append("</trk></gpx>");
+        track.append("</trk>");
+
+        if (!isEmpty())
+        {
+            track.append("<rte>");
+            //Instruction prevI = null, middleI = null, nextI = null;
+            Instruction thisI = null, nextI;
+
+            for (Instruction i : instructions)
+            {
+                nextI = i;
+
+                if (null != thisI)
+                {
+                    createRteptBlock(track, thisI, nextI);
+                }
+                thisI = nextI;
+            }
+            createRteptBlock(track, thisI, null);
+            track.append("</rte>");
+        }
+
+        // TODO #147 use wpt for via points!
+        track.append("</gpx>");
         return track.toString().replaceAll("\\'", "\"");
     }
 
@@ -295,14 +283,76 @@ public class InstructionList implements Iterable<Instruction>
         return str.substring(0, str.length() - 2) + ":" + str.substring(str.length() - 2);
     }
 
-    public static String getWayName( String name, int pavetype, int waytype, TranslationMap.Translation tr )
+    private static final TranslationMap.Translation NO_TRANSLATE = new TranslationMap.Translation()
+    {
+
+        @Override
+        public String tr( String key, Object... params )
+        {
+            if (key.equals("turn_onto") || key.equals("turn"))
+                key = "";
+
+            for (Object p : params)
+            {
+                key += " " + p.toString();
+            }
+            return key.trim();
+        }
+
+        @Override
+        public Map<String, String> asMap()
+        {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+
+        @Override
+        public Locale getLocale()
+        {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+
+        @Override
+        public String getLanguage()
+        {
+            throw new UnsupportedOperationException("Not supported yet.");
+        }
+    };
+
+    private void createRteptBlock( StringBuilder output, Instruction instruction, Instruction nextI )
+    {
+        output.append("<rtept lat=\"").append(InstructionList.round(instruction.getFirstLat(), 6)).
+                append("\" lon=\"").append(InstructionList.round(instruction.getFirstLon(), 6)).append("\">");
+
+        if (!instruction.getName().isEmpty())
+            output.append("<desc>").append(getTurnDescription(instruction, NO_TRANSLATE)).append("</desc>");
+
+        output.append("<extensions>");
+
+        output.append("<distance>").append((int) instruction.getDistance()).append("</distance>");
+        output.append("<time>").append(instruction.getTime()).append("</time>");
+
+        String direction = instruction.getDirection(nextI);
+        if (null != direction)
+        {
+            output.append("<direction>").append(direction).append("</direction>");
+        }
+        String azimuth = instruction.getAzimuth(nextI);
+        if (null != azimuth)
+        {
+            output.append("<azimuth>").append(azimuth).append("</azimuth>");
+        }
+        output.append("</extensions>");
+        output.append("</rtept>");
+    }
+
+    public static String getWayName( String name, int paveType, int wayType, TranslationMap.Translation tr )
     {
         String pavementName = "";
-        if (pavetype == 1)
+        if (paveType == 1)
             pavementName = tr.tr("unpaved");
 
         String wayClass = "";
-        switch (waytype)
+        switch (wayType)
         {
             case 0:
                 wayClass = tr.tr("road");
@@ -324,7 +374,7 @@ public class InstructionList implements Iterable<Instruction>
             else
                 return wayClass + ", " + pavementName;
         else if (pavementName.isEmpty())
-            if (waytype == 0)
+            if (wayType == 0)
                 return name;
             else
                 return name + ", " + wayClass;
@@ -332,4 +382,25 @@ public class InstructionList implements Iterable<Instruction>
             return name + ", " + pavementName;
     }
 
+    /**
+     * Round the value to the specified exponent
+     */
+    static double round( double value, int exponent )
+    {
+        double factor = Math.pow(10, exponent);
+        return Math.round(value * factor) / factor;
+    }
+
+    /**
+     * @return list of lat lon
+     */
+    List<List<Double>> createStartPoints()
+    {
+        List<List<Double>> res = new ArrayList<List<Double>>(instructions.size());
+        for (Instruction instruction : instructions)
+        {
+            res.add(Arrays.asList(instruction.getFirstLat(), instruction.getFirstLon()));
+        }
+        return res;
+    }
 }

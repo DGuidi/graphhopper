@@ -204,7 +204,7 @@ public class PrepareContractionHierarchiesTest
 
         // both dirs
         assertTrue(sc1.toString(), sc1.from == 3 && sc1.to == 2);
-        assertTrue(sc1.toString(), carEncoder.isBoth(sc1.flags));
+        assertTrue(sc1.toString(), carEncoder.isForward(sc1.flags) && carEncoder.isBackward(sc1.flags));
 
         // directed
         assertTrue(sc2.toString(), sc2.from == 2 && sc2.to == 3);
@@ -298,17 +298,17 @@ public class PrepareContractionHierarchiesTest
 
         PrepareContractionHierarchies prepare = new PrepareContractionHierarchies(carEncoder, weighting).setGraph(g);
         EdgeSkipIterState tmp = g.shortcut(1, 4);
-        tmp.setFlags(prepare.getScBothDir());
-        tmp.setWeight(2);        
+        tmp.setFlags(PrepareEncoder.getScDirMask());
+        tmp.setWeight(2);
         tmp.setSkippedEdges(iter1_1.getEdge(), iter1_2.getEdge());
-        long f = prepare.getScFwdDir();
+        long f = PrepareEncoder.getScFwdDir();
         tmp = g.shortcut(4, 6);
         tmp.setFlags(f);
-        tmp.setWeight(2);        
+        tmp.setWeight(2);
         tmp.setSkippedEdges(iter2_1.getEdge(), iter2_2.getEdge());
         tmp = g.shortcut(6, 4);
         tmp.setFlags(f);
-        tmp.setWeight(3);        
+        tmp.setWeight(3);
         tmp.setSkippedEdges(iter3_1.getEdge(), iter3_2.getEdge());
 
         prepare.initFromGraph();
@@ -329,7 +329,7 @@ public class PrepareContractionHierarchiesTest
         EdgeIteratorState iter4 = g.edge(3, 4).setDistance(dist).setFlags(flags);
         EdgeIteratorState iter5 = g.edge(4, 5).setDistance(dist).setFlags(flags);
         EdgeIteratorState iter6 = g.edge(5, 6).setDistance(dist).setFlags(flags);
-        long oneDirFlags = new PrepareContractionHierarchies(carEncoder, w).getScFwdDir();
+        long oneDirFlags = PrepareEncoder.getScFwdDir();
 
         int tmp = iterTmp1.getEdge();
         EdgeSkipIterState sc1 = g.shortcut(0, 2);
@@ -401,6 +401,30 @@ public class PrepareContractionHierarchiesTest
         PrepareContractionHierarchies prepare = new PrepareContractionHierarchies(carEncoder, weighting).setGraph(g);
         prepare.doWork();
         assertEquals(0, prepare.getShortcuts());
+    }
+
+    @Test
+    public void testBug178()
+    {
+        // 5--------6__
+        // |        |  \
+        // 0-1->-2--3--4
+        //   \-<-/
+        //
+        LevelGraph g = createGraph();
+        g.edge(1, 2, 1, false);
+        g.edge(2, 1, 1, false);
+        
+        g.edge(5, 0, 1, true);
+        g.edge(5, 6, 1, true);
+        g.edge(0, 1, 1, true);
+        g.edge(2, 3, 1, true);
+        g.edge(3, 4, 1, true);
+        g.edge(6, 3, 1, true);
+        
+        PrepareContractionHierarchies prepare = new PrepareContractionHierarchies(carEncoder, weighting).setGraph(g);
+        prepare.doWork();
+        assertEquals(2, prepare.getShortcuts());
     }
 
     // 0-1-2-3-4

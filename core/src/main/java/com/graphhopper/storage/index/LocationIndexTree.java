@@ -25,6 +25,7 @@ import com.graphhopper.routing.util.EdgeFilter;
 import com.graphhopper.storage.DataAccess;
 import com.graphhopper.storage.Directory;
 import com.graphhopper.storage.Graph;
+import com.graphhopper.storage.NodeAccess;
 import com.graphhopper.util.*;
 import com.graphhopper.util.shapes.BBox;
 import gnu.trove.list.array.TIntArrayList;
@@ -52,6 +53,7 @@ public class LocationIndexTree implements LocationIndex
     protected static DistanceCalc distCalc = new DistancePlaneProjection();
     private DistanceCalc preciseDistCalc = new DistanceCalcEarth();
     protected final Graph graph;
+    private final NodeAccess nodeAccess;
     final DataAccess dataAccess;
     private int[] entries;
     private byte[] shifts;
@@ -76,6 +78,7 @@ public class LocationIndexTree implements LocationIndex
     {
         MAGIC_INT = Integer.MAX_VALUE / 22316;
         this.graph = g;
+        this.nodeAccess = g.getNodeAccess();
         dataAccess = dir.find("locationIndex");
     }
 
@@ -354,8 +357,8 @@ public class LocationIndexTree implements LocationIndex
                 {
                     int nodeA = allIter.getBaseNode();
                     int nodeB = allIter.getAdjNode();
-                    double lat1 = graph.getLatitude(nodeA);
-                    double lon1 = graph.getLongitude(nodeA);
+                    double lat1 = nodeAccess.getLatitude(nodeA);
+                    double lon1 = nodeAccess.getLongitude(nodeA);
                     double lat2;
                     double lon2;
                     PointList points = allIter.fetchWayGeometry(0);
@@ -368,8 +371,8 @@ public class LocationIndexTree implements LocationIndex
                         lat1 = lat2;
                         lon1 = lon2;
                     }
-                    lat2 = graph.getLatitude(nodeB);
-                    lon2 = graph.getLongitude(nodeB);
+                    lat2 = nodeAccess.getLatitude(nodeB);
+                    lon2 = nodeAccess.getLongitude(nodeB);
                     addNode(nodeA, nodeB, lat1, lon1, lat2, lon2);
                 }
             } catch (Exception ex)
@@ -596,11 +599,11 @@ public class LocationIndexTree implements LocationIndex
         if (regionSearch)
         {
             // search all rasters around minResolutionInMeter as we did not fill empty entries
-            double maxLat = queryLat + deltaLat;
-            double maxLon = queryLon + deltaLon;
-            for (double tmpLat = queryLat - deltaLat; tmpLat <= maxLat; tmpLat += deltaLat)
+            double maxLat = queryLat + 1.5 * deltaLat;
+            double maxLon = queryLon + 1.5 * deltaLon;
+            for (double tmpLat = queryLat - deltaLat; tmpLat < maxLat; tmpLat += deltaLat)
             {
-                for (double tmpLon = queryLon - deltaLon; tmpLon <= maxLon; tmpLon += deltaLon)
+                for (double tmpLon = queryLon - deltaLon; tmpLon < maxLon; tmpLon += deltaLon)
                 {
                     long keyPart = createReverseKey(tmpLat, tmpLon);
                     // System.out.println(BitUtilLittle.toBitString(key, keyAlgo.bits()));
@@ -620,7 +623,7 @@ public class LocationIndexTree implements LocationIndex
             final EdgeFilter edgeFilter )
     {
         final TIntHashSet storedNetworkEntryIds = findNetworkEntries(queryLat, queryLon);
-        final QueryResult closestMatch = new QueryResult(queryLat, queryLon);               
+        final QueryResult closestMatch = new QueryResult(queryLat, queryLon);
         if (storedNetworkEntryIds.isEmpty())
             return closestMatch;
 
@@ -648,7 +651,7 @@ public class LocationIndexTree implements LocationIndex
                         {
                             closestMatch.setQueryDistance(normedDist);
                             closestMatch.setClosestNode(node);
-                            closestMatch.setClosestEdge(edge.detach());
+                            closestMatch.setClosestEdge(edge.detach(false));
                             closestMatch.setWayIndex(wayIndex);
                             closestMatch.setSnappedPosition(pos);
                             return true;
@@ -703,8 +706,8 @@ public class LocationIndexTree implements LocationIndex
         protected boolean goFurther( int baseNode )
         {
             currNode = baseNode;
-            currLat = graph.getLatitude(baseNode);
-            currLon = graph.getLongitude(baseNode);
+            currLat = nodeAccess.getLatitude(baseNode);
+            currLon = nodeAccess.getLongitude(baseNode);
             currNormedDist = distCalc.calcNormalizedDist(queryLat, queryLon, currLat, currLon);
             return goFurther;
         }
@@ -728,8 +731,8 @@ public class LocationIndexTree implements LocationIndex
             }
 
             int adjNode = currEdge.getAdjNode();
-            double adjLat = graph.getLatitude(adjNode);
-            double adjLon = graph.getLongitude(adjNode);
+            double adjLat = nodeAccess.getLatitude(adjNode);
+            double adjLon = nodeAccess.getLongitude(adjNode);
             double adjDist = distCalc.calcNormalizedDist(adjLat, adjLon, queryLat, queryLon);
             // if there are wayPoints this is only an approximation
             if (adjDist < currNormedDist)

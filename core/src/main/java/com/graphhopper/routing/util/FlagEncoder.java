@@ -26,14 +26,14 @@ package com.graphhopper.routing.util;
 public interface FlagEncoder
 {
     /**
-     * @return the speed in km/h
-     */
-    double getSpeed( long flags );
-
-    /**
      * @return the maximum speed in km/h
      */
     double getMaxSpeed();
+
+    /**
+     * @return the speed in km/h for this direction, for backward direction use getReverseSpeed
+     */
+    double getSpeed( long flags );
 
     /**
      * Sets the speed in km/h.
@@ -41,6 +41,16 @@ public interface FlagEncoder
      * @return modified setProperties
      */
     long setSpeed( long flags, double speed );
+
+    /**
+     * @return the speed of the reverse direction in km/h
+     */
+    double getReverseSpeed( long flags );
+
+    /**
+     * Sets the reverse speed in the flags.
+     */
+    long setReverseSpeed( long flags, double speed );
 
     /**
      * Sets the access of the edge.
@@ -58,20 +68,17 @@ public interface FlagEncoder
 
     boolean isForward( long flags );
 
-    boolean isBackward( long flags );
+    boolean isBackward( long flags );    
 
     /**
-     * Returns true if flags1 can be overwritten by flags2 without restricting or changing the
-     * directions of flags1.
+     * @return the number to identify a pavement of a road.
+     * @see InstructionList#getWayName
      */
-    //        \  flags2:
-    // flags1  \ -> | <- | <->
-    // ->         t | f  | t
-    // <-         f | t  | t
-    // <->        f | f  | t
-    boolean canBeOverwritten( long flags1, long flags2 );
+    int getPavementType( long flags );
 
-    int getPavementCode( long flags );
-
-    int getWayTypeCode( long flags );
+    /**
+     * @return the number to identify a pushing section, cycle way etc.
+     * @see InstructionList#getWayName
+     */
+    int getWayType( long flags );
 }
