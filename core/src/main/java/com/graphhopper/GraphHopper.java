@@ -440,7 +440,7 @@ public class GraphHopper implements GraphHopperAPI
      */
     protected CmdArgs mergeArgsFromConfig( CmdArgs args ) throws IOException
     {
-        if (Helper.isEmpty(args.get("config", "")))
+        if (!Helper.isEmpty(args.get("config", "")))
         {
             CmdArgs tmp = CmdArgs.readFromConfig(args.get("config", ""), "graphhopper.config");
             tmp.merge(args);
