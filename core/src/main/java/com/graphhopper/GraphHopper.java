@@ -593,7 +593,11 @@ public class GraphHopper implements GraphHopperAPI
 
     protected DataReader createReader( GraphStorage tmpGraph )
     {
-        return initOSMReader(new OSMReader(tmpGraph));
+        return initOSMReader(newReader(tmpGraph));
+    }
+
+    protected OSMReader newReader(GraphStorage tmpGraph) {
+      return new OSMReader(tmpGraph);
     }
 
     protected OSMReader initOSMReader( OSMReader reader )

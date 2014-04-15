@@ -160,7 +160,7 @@ public class OSMReader implements DataReader
      * Preprocessing of OSM file to select nodes which are used for highways. This allows a more
      * compact graph data structure.
      */
-    void preProcess( File osmFile )
+    protected void preProcess( File osmFile )
     {
         OSMInputFile in = null;
         try
@@ -263,7 +263,7 @@ public class OSMReader implements DataReader
     /**
      * Creates the edges and nodes files from the specified osm file.
      */
-    private void writeOsm2Graph( File osmFile )
+    protected void writeOsm2Graph( File osmFile )
     {
         int tmp = (int) Math.max(getNodeMap().getSize() / 50, 100);
         logger.info("creating graph. Found nodes (pillar+tower):" + nf(getNodeMap().getSize()) + ", " + Helper.getMemInfo());
@@ -531,7 +531,7 @@ public class OSMReader implements DataReader
         }
     }
 
-    boolean addNode( OSMNode node )
+    protected boolean addNode( OSMNode node )
     {
         int nodeType = getNodeMap().get(node.getId());
         if (nodeType == EMPTY)
@@ -890,7 +890,7 @@ public class OSMReader implements DataReader
     /**
      * Maps OSM IDs (long) to internal node IDs (int)
      */
-    LongIntMap getNodeMap()
+    protected LongIntMap getNodeMap()
     {
         return osmNodeIdToInternalNodeMap;
     }
