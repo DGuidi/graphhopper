@@ -111,10 +111,10 @@ public class GHServer
             {
                 binder().requireExplicitBindings();
 
-                install(new DefaultModule(args){
+                install(new DefaultModule(args) {
+                  // EXPLICIT CODE CHANGE!
                   @Override
                   protected GraphHopper create() {
-                    // EXPLICIT CODE CHANGE!
                     return new MapaalGraphHopper();
                   }
                 });

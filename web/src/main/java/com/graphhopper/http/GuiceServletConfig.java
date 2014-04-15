@@ -43,10 +43,10 @@ public class GuiceServletConfig extends GuiceServletContextListener
 
     protected Module createDefaultModule()
     {
-        return new DefaultModule(new CmdArgs()){
+        return new DefaultModule(new CmdArgs()) {
+          // EXPLICIT CODE CHANGE!
           @Override
           protected GraphHopper create() {
-            // EXPLICIT CODE CHANGE!
             return new MapaalGraphHopper();
           }
         };
