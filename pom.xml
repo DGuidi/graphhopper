@@ -76,6 +76,7 @@
     <modules>
         <module>core</module>
         <module>tools</module>
+		<module>../workspace/mapaal</module>
         <module>web</module>
         <!--module>android</module-->
     </modules>
