@@ -907,15 +907,15 @@ function parseUrl(query) {
 function mySubmit() {
     var fromStr = $("#fromInput").val();
     var toStr = $("#toInput").val();
-    if (toStr == "To" && fromStr == "From") {
+    if (!toStr && !fromStr) {
         // TODO print warning
         return;
     }
-    if (fromStr == "From") {
+    if (!fromStr) {
         // no special function
         return;
     }
-    if (toStr == "To") {
+    if (!toStr) {
         // lookup area
         ghRequest.from = new GHInput(fromStr);
         $.when(resolveFrom()).done(function() {
