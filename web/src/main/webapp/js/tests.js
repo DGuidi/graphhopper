@@ -18,7 +18,7 @@ $(function () {
 		var encoded = path.points,
 		len = encoded.length,
 		index = 0,
-		array = [],
+		arr = [],
 		lat = 0,
 		lng = 0,
 		ele = 0;
@@ -43,28 +43,16 @@ $(function () {
 			} while (b >= 0x20);
 			var deltaLon = ((result & 1) ? ~(result >> 1) : (result >> 1));
 			lng += deltaLon;
-
-			if (path.points_dimension === 3) {
-				// elevation
-				shift = 0;
-				result = 0;
-				do {
-					b = encoded.charCodeAt(index++) - 63;
-					result |= (b & 0x1f) << shift;
-					shift += 5;
-				} while (b >= 0x20);
-				var deltaEle = ((result & 1) ? ~(result >> 1) : (result >> 1));
-				ele += deltaEle;
-				array.push([lng * 1e-5, lat * 1e-5, ele / 100]);
-			} else {
-				array.push([lng * 1e-5, lat * 1e-5]);
-			}
+			arr.push([lng * 1e-5, lat * 1e-5]);
 		}
-		return array;
+		return arr;
+	},
+	formatCoord = function (coord) {
+		return coord[0].toFixed(6) + ' ' + coord[1].toFixed(6);
 	};
 
 	asyncTest("routing without points encoding", function () {
-		expect(4);
+		expect(5);
 		var url = [
 			host + 'route?',
 			'point=43.164832,13.72317',
@@ -86,11 +74,13 @@ $(function () {
 				console.log(path);
 
 				ok(!path.points_encoded, 'points are not encoded');
+				var points = path.points.coordinates;
+				ok(path.points_dimension === 2, _(points).map(formatCoord).join(','));
 			});
 	});
 
 	asyncTest("routing with points encoding", function () {
-		expect(4);
+		expect(5);
 		var url = [
 			host + 'route?',
 			'point=43.164832,13.72317',
@@ -112,7 +102,7 @@ $(function () {
 
 				ok(path.points_encoded, 'points are encoded');
 				var points = decodePath(path);
-				console.log(points);
+				ok(path.points_dimension === 2, _(points).map(formatCoord).join(','));
 			});
 	});
 });
