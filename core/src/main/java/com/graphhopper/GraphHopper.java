@@ -597,7 +597,7 @@ public class GraphHopper implements GraphHopperAPI
     }
 
     protected OSMReader newReader(GraphStorage tmpGraph) {
-      return new OSMReader(tmpGraph);
+        return new OSMReader(tmpGraph);
     }
 
     protected OSMReader initOSMReader( OSMReader reader )
@@ -808,13 +808,17 @@ public class GraphHopper implements GraphHopperAPI
         if (places.size() - 1 != paths.size())
             throw new RuntimeException("There should be exactly one more places than paths. places:" + places.size() + ", paths:" + paths.size());
 
-        new PathMerger().
+        newMerger(encoder).
                 setCalcPoints(calcPoints).
                 setDouglasPeucker(peucker).
                 setEnableInstructions(enableInstructions).
                 setSimplifyRequest(simplifyRequest && minPathPrecision > 0).
                 doWork(rsp, paths);
         return rsp;
+    }
+    
+    protected PathMerger newMerger(FlagEncoder encoder) {
+        return new PathMerger();
     }
 
     protected LocationIndex createLocationIndex( Directory dir )

@@ -66,7 +66,7 @@ public class Path
     /**
      * Populates an unextracted path instances from the specified path p.
      */
-    Path( Path p )
+    protected Path( Path p )
     {
         this(p.graph, p.encoder);
         weight = p.weight;
@@ -342,6 +342,7 @@ public class Path
         if (edgeIds.isEmpty())
             return cachedWays;
 
+        final Path root = this;
         final int tmpNode = getFromNode();
         forEveryEdge(new EdgeVisitor()
         {
@@ -378,6 +379,10 @@ public class Path
             @Override
             public void next( EdgeIteratorState edge, int index )
             {
+                if (root.pathInterceptor != null) {
+                  root.pathInterceptor.handle(edge, index);
+                }
+                
                 // baseNode is the current node and adjNode is the next
                 int adjNode = edge.getAdjNode();
                 double adjLat = nodeAccess.getLatitude(adjNode);
@@ -544,5 +549,11 @@ public class Path
             str += edgeIds.get(i);
         }
         return toString() + ", " + str;
+    }
+
+    private PathInterceptor pathInterceptor;
+    
+    public void setPathInterceptor(PathInterceptor interceptor) {
+      this.pathInterceptor = interceptor;
     }
 }

@@ -820,6 +820,12 @@ function addInstruction(main, instr, instrIndex, lngLat) {
         sign = "sharp_right";
     else if (sign === 4)
         sign = "marker-icon-red";
+    else if (sign === 5)
+    	sign = "ok";
+    else if (sign === 6)
+    	sign = "warn";
+    else if (sign === 7)
+    	sign = "err";
     else
         throw "did not found sign " + sign;
     var title = instr.text;
