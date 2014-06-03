@@ -50,7 +50,6 @@ import android.widget.Toast;
 import com.graphhopper.GHRequest;
 import com.graphhopper.GHResponse;
 import com.graphhopper.GraphHopper;
-import com.graphhopper.GraphHopperAPI;
 import com.graphhopper.util.Constants;
 import com.graphhopper.util.Downloader;
 import com.graphhopper.util.Helper;
@@ -61,7 +60,7 @@ import com.graphhopper.util.StopWatch;
 public class MainActivity extends Activity
 {
     private MapView mapView;
-    private GraphHopperAPI hopper;
+    private GraphHopper hopper;
     private LatLong start;
     private LatLong end;
     private Spinner localSpinner;
@@ -164,6 +163,16 @@ public class MainActivity extends Activity
         // if (AndroidHelper.isFastDownload(this))
         chooseAreaFromRemote();
         chooseAreaFromLocal();
+    }
+
+    @Override
+    protected void onDestroy()
+    {
+        super.onDestroy();
+        hopper.close();
+        hopper = null;
+        // necessary?
+        System.gc();
     }
 
     boolean isReady()
@@ -390,7 +399,7 @@ public class MainActivity extends Activity
                 true, AndroidGraphicFactory.INSTANCE)
                 {
                     @Override
-                    public boolean onTap( LatLong tapLatLong, Point layerXY, Point tapXY )
+                    public boolean onLongPress( LatLong tapLatLong, Point layerXY, Point tapXY )
                     {
                         return onMapTap(tapLatLong, layerXY, tapXY);
                     }
@@ -428,7 +437,7 @@ public class MainActivity extends Activity
                             + getErrorMessage());
                 } else
                 {
-                    logUser("Finished loading graph. Touch to route.");
+                    logUser("Finished loading graph. Press long to define where to start and end the route.");
                 }
 
                 finishPrepare();
