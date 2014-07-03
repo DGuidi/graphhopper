@@ -644,6 +644,7 @@ function routeLatLng(request, doQuery) {
             return;
         }
         var path = json.paths[0];
+        console.log('path found', path);
         var geojsonFeature = {
             "type": "Feature",
             // "style": myStyle,                
