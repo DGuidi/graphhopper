@@ -27,6 +27,12 @@ public class MapaalGraphHopperServlet extends GraphHopperServlet {
   private static final long serialVersionUID = 5682815885200619893L;
 
   @Override
+  protected String routingType(HttpServletRequest req) {
+    String param = getParam(req, "routingType", null);
+    return param != null ? param : getParam(req, "vehicle", "CAR");
+  }
+  
+  @Override
   protected String defaultLocale() {
     return "it";
   }
@@ -71,7 +77,7 @@ public class MapaalGraphHopperServlet extends GraphHopperServlet {
     boolean enableInstructions = getBooleanParam(req, "instructions", true);
     boolean pointsEncoded = getBooleanParam(req, "points_encoded", false);
     boolean calcPoints = getBooleanParam(req, "calc_points", true);
-    boolean includeElevation = getBooleanParam(req, "elevation", true);
+    boolean includeElevation = getBooleanParam(req, "elevation", false);
     JSONObject jsonPath = new JSONObject();
     jsonPath.put("distance", Helper.round(rsp.getDistance(), 3));
     jsonPath.put("time", rsp.getMillis());

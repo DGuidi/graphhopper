@@ -60,8 +60,8 @@ $(function () {
 			host + 'route?',
 			'point=43.165858,13.724729',
 			'point=43.167963,13.726033',
-			'type=json',
-			'vehicle=mapaal'
+			'routingType=mapaal',
+			'debug=true'
     ].join('&'),
 		req = createRequest(url)
 			.done(function (json) {

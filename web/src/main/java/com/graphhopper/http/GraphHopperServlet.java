@@ -71,7 +71,7 @@ public class GraphHopperServlet extends GHBaseServlet
         boolean enableInstructions = writeGPX || getBooleanParam(req, "instructions", true);
         boolean calcPoints = getBooleanParam(req, "calc_points", true);
         boolean elevation = getBooleanParam(req, "elevation", false);
-        String vehicleStr = getParam(req, "vehicle", "CAR").toUpperCase();
+        String vehicleStr = routingType(req).toUpperCase();
         String weighting = getParam(req, "weighting", "fastest");
         String algoStr = getParam(req, "algorithm", "");
         String localeStr = getParam(req, "locale", defaultLocale());
@@ -115,6 +115,10 @@ public class GraphHopperServlet extends GHBaseServlet
             writeGPX(req, res, rsp);
         else
             writeJson(req, res, rsp, took);
+    }
+
+    protected String routingType(HttpServletRequest req) {
+      return getParam(req, "vehicle", "CAR");
     }
 
     protected String defaultLocale() {
