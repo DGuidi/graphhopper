@@ -22,8 +22,6 @@ import com.graphhopper.GraphHopper;
 import com.graphhopper.GHResponse;
 import com.graphhopper.routing.util.FlagEncoder;
 import com.graphhopper.util.*;
-import com.graphhopper.util.Helper;
-import com.graphhopper.util.Translation;
 import com.graphhopper.util.shapes.GHPoint;
 import java.io.IOException;
 import java.util.*;
@@ -45,7 +43,7 @@ import org.json.JSONObject;
 public class GraphHopperServlet extends GHBaseServlet
 {
     @Inject
-    private GraphHopper hopper;
+    protected GraphHopper hopper;
 
     @Override
     public void doGet( HttpServletRequest req, HttpServletResponse res ) throws ServletException, IOException
@@ -76,7 +74,7 @@ public class GraphHopperServlet extends GHBaseServlet
         String vehicleStr = getParam(req, "vehicle", "CAR").toUpperCase();
         String weighting = getParam(req, "weighting", "fastest");
         String algoStr = getParam(req, "algorithm", "");
-        String localeStr = getParam(req, "locale", "en");
+        String localeStr = getParam(req, "locale", defaultLocale());
 
         StopWatch sw = new StopWatch().start();
         GHResponse rsp;
@@ -119,6 +117,10 @@ public class GraphHopperServlet extends GHBaseServlet
             writeJson(req, res, rsp, took);
     }
 
+    protected String defaultLocale() {
+      return "en";
+    }
+
     private void writeGPX( HttpServletRequest req, HttpServletResponse res, GHResponse rsp )
     {
         boolean includeElevation = getBooleanParam(req, "elevation", false);
@@ -131,7 +133,7 @@ public class GraphHopperServlet extends GHBaseServlet
         writeResponse(res, rsp.getInstructions().createGPX(trackName, time, timeZone, includeElevation));
     }
 
-    private void writeJson( HttpServletRequest req, HttpServletResponse res,
+    protected void writeJson( HttpServletRequest req, HttpServletResponse res,
             GHResponse rsp, float took ) throws JSONException, IOException
     {
         boolean enableInstructions = getBooleanParam(req, "instructions", true);

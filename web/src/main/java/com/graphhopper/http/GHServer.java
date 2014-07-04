@@ -118,7 +118,14 @@ public class GHServer
                     return new MapaalGraphHopper();
                   }
                 });
-                install(new GHServletModule());
+                install(new GHServletModule() 
+                {
+                  // EXPLICIT CODE CHANGE!
+                  @Override
+                  protected Class routeServlet() {
+                    return MapaalGraphHopperServlet.class;
+                  }
+                });
 
                 bind(GuiceFilter.class);
             }

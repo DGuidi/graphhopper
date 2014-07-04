@@ -61,9 +61,7 @@ $(function () {
 			'point=43.165858,13.724729',
 			'point=43.167963,13.726033',
 			'type=json',
-			'vehicle=mapaal',
-			'locale=it',
-			'points_encoded=false'
+			'vehicle=mapaal'
     ].join('&'),
 		req = createRequest(url)
 			.done(function (json) {
@@ -75,7 +73,6 @@ $(function () {
 			  ok(paths && paths.length && paths.length === 1, 'paths valid');
 			  path = paths[0];
 			  ok(path, 'path found');
-			  console.log(path);
 
 			  ok(!path.points_encoded, 'points are not encoded');
 			  var points = path.points.coordinates;
