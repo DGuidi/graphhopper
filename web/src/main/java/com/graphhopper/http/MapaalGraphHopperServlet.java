@@ -1,15 +1,21 @@
 package com.graphhopper.http;
 
+import it.esalab.mapaal.http.repository.ForbiddenEdgesRepository;
+
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -24,8 +30,30 @@ import com.graphhopper.util.shapes.BBox;
  */
 public class MapaalGraphHopperServlet extends GraphHopperServlet {
 
-  private static final long serialVersionUID = 5682815885200619893L;
+	private static final long serialVersionUID = 5682815885200619893L;
 
+	private ForbiddenEdgesRepository nodesHandler = new ForbiddenEdgesRepository();
+
+	@Override
+	protected void doPost(HttpServletRequest req, HttpServletResponse resp)
+			throws ServletException, IOException {
+		if ("POST".equalsIgnoreCase(req.getMethod())) {
+			Scanner s = new Scanner(req.getInputStream(), "UTF-8")
+					.useDelimiter("\\A");
+			String body = s.hasNext() ? s.next() : "";
+			if(body.equals("")){
+				  throw new RuntimeException("Empty report data from post request");
+			}
+			else{
+				JSONArray reportArray = new JSONArray(body);
+				nodesHandler.reciveReport(reportArray);
+			}
+		}
+		// successivamente eseguo un normale routing TODO: accertarsi che
+		// l'inserimento sia andato a buon fine
+		doGet(req, resp);
+	}
+  
   @Override
   protected String routingType(HttpServletRequest req) {
     String param = getParam(req, "routingType", null);

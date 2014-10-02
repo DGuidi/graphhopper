@@ -17,6 +17,8 @@
  */
 package com.graphhopper.routing.util;
 
+import java.sql.SQLException;
+
 import com.graphhopper.util.EdgeIteratorState;
 
 /**

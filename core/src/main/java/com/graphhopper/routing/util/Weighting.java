@@ -17,6 +17,8 @@
  */
 package com.graphhopper.routing.util;
 
+import java.sql.SQLException;
+
 import com.graphhopper.util.EdgeIteratorState;
 
 /**
@@ -39,6 +41,7 @@ public interface Weighting
      * case of a bidirectional search.
      * @return the calculated weight with the specified velocity has to be in the range of 0 and
      * +Infinity. Make sure your method does not return NaN which can e.g. occur for 0/0.
+     * @throws SQLException 
      */
     double calcWeight( EdgeIteratorState edge, boolean reverse );
 }
