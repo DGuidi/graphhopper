@@ -171,15 +171,14 @@ public class MapaalGraphHopperServlet extends GraphHopperServlet {
 				}
 			}
 
-			if (nearestMAXlatIndex != nearestMAXlonIndex
-					|| nearestMINlatIndex != nearestMINlonIndex) {
-				// TODO: errore da gestire, non ho identificato correttamente i
-				// nodi più vicini continuo con la segnalazione che mi è arrivata
-			} else {
+			if ((nearestMAXlatIndex == nearestMAXlonIndex && nearestMINlatIndex == nearestMINlonIndex)||nearestMAXlatIndex == nearestMINlonIndex && nearestMINlatIndex == nearestMAXlonIndex){
 				long[] normnodes = { nearestMINlatIndex, nearestMAXlatIndex };
 				report.setNodes(normnodes);
+				}
+			else{				
+				// TODO: errore da gestire, non ho identificato correttamente i
+				// nodi più vicini continuo con la segnalazione che mi è arrivata
 			}
-
 		} catch (ParserConfigurationException e) {
 			System.out.println("error while parsing osm document");
 			e.printStackTrace();
