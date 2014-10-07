@@ -64,6 +64,8 @@ public class GraphHopper implements GraphHopperAPI
         hopper.close();
     }
 
+    private OSMReader omsReader;
+    
     private final Logger logger = LoggerFactory.getLogger(getClass());
     // for graph:
     private GraphStorage graph;
@@ -609,9 +611,14 @@ public class GraphHopper implements GraphHopperAPI
     {
         return initOSMReader(newReader(tmpGraph));
     }
-
-    protected OSMReader newReader(GraphStorage tmpGraph) {
-        return new OSMReader(tmpGraph);
+    
+    public OSMReader newReader(GraphStorage tmpGraph) {
+    	omsReader= new OSMReader(tmpGraph);
+        return omsReader;
+    }
+    
+    public OSMReader getOMSReader (){
+    	return omsReader;
     }
 
     protected OSMReader initOSMReader( OSMReader reader )

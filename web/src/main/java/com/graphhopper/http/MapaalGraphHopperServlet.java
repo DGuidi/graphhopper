@@ -1,8 +1,10 @@
 package com.graphhopper.http;
 
-import it.esalab.mapaal.http.repository.ForbiddenEdgesRepository;
 
-import java.io.BufferedReader;
+import it.esalab.mapaal.http.parsers.JsonReportParser;
+import it.esalab.mapaal.http.repository.ForbiddenEdgesRepository;
+import it.esalab.mapaal.http.repository.Report;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -14,10 +16,23 @@ import java.util.Scanner;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpression;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 import com.graphhopper.GHResponse;
 import com.graphhopper.util.Helper;
@@ -41,17 +56,140 @@ public class MapaalGraphHopperServlet extends GraphHopperServlet {
 			Scanner s = new Scanner(req.getInputStream(), "UTF-8")
 					.useDelimiter("\\A");
 			String body = s.hasNext() ? s.next() : "";
-			if(body.equals("")){
-				  throw new RuntimeException("Empty report data from post request");
-			}
-			else{
+			if (body.equals("")) {
+				throw new RuntimeException(
+						"Empty report data from post request");
+			} else {
 				JSONArray reportArray = new JSONArray(body);
-				nodesHandler.reciveReport(reportArray);
+				for (int i = 0; i < reportArray.length(); i++) {
+					JSONObject jreport = reportArray.getJSONObject(0);
+					Report report = new Report("Feature", "Point", "POI");
+					JsonReportParser parser = new JsonReportParser(report);
+					report = parser.ParseReport(jreport);
+					snapReportToSingleEdge(report);
+					boolean res = nodesHandler.receiveReport(report);
+					if (!res) {
+						// TODO: standardizzare l'errore di inserimento ma
+						// continuare il ciclo e fornire comunque un routing
+					}
+				}
 			}
 		}
-		// successivamente eseguo un normale routing TODO: accertarsi che
-		// l'inserimento sia andato a buon fine
 		doGet(req, resp);
+	}
+
+	private void snapReportToSingleEdge(Report report) throws IOException {
+		long stantnode = report.getNodes()[0];
+		long endnode = report.getNodes()[1];
+		double[] gpx = report.getCoordinates();
+
+		NodeList nl;
+		List<String> matchingnodes = new ArrayList<String>();
+
+		try {
+
+			DocumentBuilderFactory factory = DocumentBuilderFactory
+					.newInstance();
+			DocumentBuilder builder;
+			builder = factory.newDocumentBuilder();
+			Document doc = builder.parse(hopper.getOSMFile());
+			XPathFactory xPathfactory = XPathFactory.newInstance();
+			XPath xpath = xPathfactory.newXPath();
+			XPathExpression expr = xpath.compile("//way[nd/@ref=\"" + stantnode
+					+ "\" or nd/@ref=\"" + endnode + "\"]");
+			nl = (NodeList) expr.evaluate(doc, XPathConstants.NODESET);
+
+			/*
+			 * ricavo dall'osm gli elementi via che comprendono i nodi della
+			 * segnalazione
+			 */
+			for (int j = 0; j < nl.getLength(); j++) {
+				if (nl.item(j).getNodeType() == Node.ELEMENT_NODE) {
+					Element via = (Element) nl.item(j);
+					NodeList childNodes = via.getElementsByTagName("nd");
+					for (int j1 = 0; j1 < childNodes.getLength(); j1++) {
+						Element child = (Element) childNodes.item(j1);
+						matchingnodes.add(child.getAttribute("ref"));
+					}
+				}
+			}
+
+			/*
+			 * recupero dall osm le coordinate di tutti i nodi trovati
+			 */
+			String[][] matchingnodes_coords = new String[3][matchingnodes
+					.size()];
+			NodeList edgeNodes = doc.getElementsByTagName("node");
+			for (int j = 0; j < edgeNodes.getLength(); j++) {
+				Element node = (Element) edgeNodes.item(j);
+				String id = node.getAttribute("id");
+				if (matchingnodes.contains(id)) {
+					int index = matchingnodes.indexOf(id);
+					matchingnodes_coords[0][index] = id;
+					matchingnodes_coords[1][index] = node.getAttribute("lat");
+					matchingnodes_coords[2][index] = node.getAttribute("lon");
+				}
+			}
+
+			/*
+			 * ottengo la coppia di nodi più vicini alle coordinate della
+			 * segnalazione
+			 */
+			double nearestMAXlat, nearestMINlat, nearestMAXlon, nearestMINlon;
+			nearestMAXlat = nearestMAXlon = Double.MIN_VALUE;
+			nearestMINlat = nearestMINlon = Double.MAX_VALUE;
+			long nearestMINlatIndex, nearestMAXlatIndex, nearestMAXlonIndex, nearestMINlonIndex;
+			nearestMINlatIndex = nearestMAXlatIndex = nearestMAXlonIndex = nearestMINlonIndex = 0;
+
+			for (int j = 0; j < matchingnodes_coords[1].length; j++) {
+				if (matchingnodes_coords[1][j] != null
+						&& matchingnodes_coords[2][j] != null) {
+					double actualLat = Double
+							.parseDouble(matchingnodes_coords[1][j]);
+					double actualLon = Double
+							.parseDouble(matchingnodes_coords[2][j]);
+					if (actualLat >= gpx[0] && actualLat <= nearestMINlat) {
+						nearestMINlat = actualLat;
+						nearestMINlatIndex = Long
+								.parseLong(matchingnodes_coords[0][j]);
+					}
+					if (actualLat <= gpx[0] && actualLat >= nearestMAXlat) {
+						nearestMAXlat = actualLat;
+						nearestMAXlatIndex = Long
+								.parseLong(matchingnodes_coords[0][j]);
+					}
+					if (actualLon >= gpx[1] && actualLon <= nearestMINlon) {
+						nearestMINlon = actualLon;
+						nearestMINlonIndex = Long
+								.parseLong(matchingnodes_coords[0][j]);
+					}
+					if (actualLon <= gpx[1] && actualLon >= nearestMAXlon) {
+						nearestMAXlon = actualLon;
+						nearestMAXlonIndex = Long
+								.parseLong(matchingnodes_coords[0][j]);
+					}
+				}
+			}
+
+			if (nearestMAXlatIndex != nearestMAXlonIndex
+					|| nearestMINlatIndex != nearestMINlonIndex) {
+				// TODO: errore da gestire, non ho identificato correttamente i
+				// nodi più vicini continuo con la segnalazione che mi è arrivata
+			} else {
+				long[] normnodes = { nearestMINlatIndex, nearestMAXlatIndex };
+				report.setNodes(normnodes);
+			}
+
+		} catch (ParserConfigurationException e) {
+			System.out.println("error while parsing osm document");
+			e.printStackTrace();
+		} catch (SAXException e) {
+			System.out.println("error while parsing osm document");
+			e.printStackTrace();
+		} catch (XPathExpressionException e) {
+			System.out.println("error while nodes collection");
+			e.printStackTrace();
+		}
 	}
   
   @Override

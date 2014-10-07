@@ -5,19 +5,19 @@ $(function () {
   
   url = [
          host + 'route?',
-         'point=43.612947,13.505276',
-         'point=43.611887,13.50474',
+         'point=43.612966,13.50526',
+         'point=43.611856,13.504794',
          'vehicle=mapaal',
          'debug=true'
        ].join('&');
   
   jsonData=[{
-	    "nodes": [127848207,1873976113],
+	    "nodes": [474842489,1873976113],
 	    "poi": {
 	      "type": "Feature",
 	      "geometry": {
 	        "type": "Point",
-	        "coordinates": [43.6125232,13.5048275]
+	        "coordinates": [43.61264,13.504987]
 	      },
 	      "properties": {
 	        "typename": "POI"

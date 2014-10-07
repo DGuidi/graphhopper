@@ -47,7 +47,7 @@ public class GraphHopperServlet extends GHBaseServlet
 
     @Override
     public void doGet( HttpServletRequest req, HttpServletResponse res ) throws ServletException, IOException
-    {
+    {	
         try
         {
             writePath(req, res);
@@ -205,7 +205,7 @@ public class GraphHopperServlet extends GHBaseServlet
         return jsonPoints;
     }
 
-    private List<GHPoint> getPoints( HttpServletRequest req ) throws IOException
+    protected List<GHPoint> getPoints( HttpServletRequest req ) throws IOException
     {
         String[] pointsAsStr = getParams(req, "point");
         final List<GHPoint> infoPoints = new ArrayList<GHPoint>(pointsAsStr.length);
