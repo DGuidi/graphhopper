@@ -175,8 +175,9 @@ public class MapaalGraphHopperServlet extends GraphHopperServlet {
 				long[] normnodes = { nearestMINlatIndex, nearestMAXlatIndex };
 				report.setNodes(normnodes);
 				}
-			else{				
-				// TODO: errore da gestire, non ho identificato correttamente i
+			else{
+				System.out.println("nodi problematici");
+				// TODO: errore da gestire, non ho ide;ntificato correttamente i
 				// nodi più vicini continuo con la segnalazione che mi è arrivata
 			}
 		} catch (ParserConfigurationException e) {

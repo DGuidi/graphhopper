@@ -55,9 +55,13 @@ public class GHServletModule extends ServletModule
 
         serve("/info*").with(InfoServlet.class);
         bind(InfoServlet.class).in(Singleton.class);
-
+        
         serve("/route*").with(routeServlet());
         bind(routeServlet()).in(Singleton.class);
+        
+        serve("/repoJanitor*").with(RepositoryJanitorServlet.class);
+        bind(RepositoryJanitorServlet.class).in(Singleton.class);
+        
     }
 
     protected Class<GraphHopperServlet> routeServlet() {
