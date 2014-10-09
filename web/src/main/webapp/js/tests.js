@@ -13,7 +13,19 @@ $(function () {
        'debug=true'
      ].join('&');
   };
+<<<<<<< HEAD
 
+=======
+//  url = [
+//         host + 'route?',
+//         'point=43.612966,13.50526',
+//         'point=43.611856,13.504794',
+//         'vehicle=mapaal',
+//         'debug=true'
+//       ].join('&');
+    
+  
+>>>>>>> b8683919930d4e5cd6f7af1d46580b4c5bd8bd8b
   createJsonData = function(nodeA,nodeB,lat,lon){
   jsonData=[{
 	    "nodes": [nodeA,nodeB],
@@ -234,6 +246,7 @@ $(function () {
 	      });
 	  });
   
+
   asyncTest("re-routing request - via panoramica - worst case scenario -- needs work", function () {
 	    expect(6);
 	    var url = createurl(43.619592,13.527297,43.618881,13.523998);
@@ -259,5 +272,6 @@ $(function () {
 	        ok(instructions && instructions.length === expetedLenght, 'instructions: ' + _(instructions).map(formatInstruction).join(','));
 	      });
 	  });
+
 
 });
