@@ -13,19 +13,7 @@ $(function () {
        'debug=true'
      ].join('&');
   };
-<<<<<<< HEAD
 
-=======
-//  url = [
-//         host + 'route?',
-//         'point=43.612966,13.50526',
-//         'point=43.611856,13.504794',
-//         'vehicle=mapaal',
-//         'debug=true'
-//       ].join('&');
-    
-  
->>>>>>> b8683919930d4e5cd6f7af1d46580b4c5bd8bd8b
   createJsonData = function(nodeA,nodeB,lat,lon){
   jsonData=[{
 	    "nodes": [nodeA,nodeB],
