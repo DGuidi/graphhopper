@@ -158,7 +158,7 @@ $(function () {
   asyncTest("re-routing request - via mamiani", function () {
     expect(6);
     var url = createurl(43.612966,13.50526,43.611856,13.504794);
-    var data = createJsonData(474842489,1873976113,43.61264,13.504987)
+    var data = createJsonData(1873976112,1873976113,43.61264,13.504987)
  	  var expetedLenght=6
     var req = createReroutingRequest(url,data)
       .done(function (json) {
@@ -210,7 +210,7 @@ $(function () {
   asyncTest("re-routing request - via santo stefano", function () {
 	    expect(6);
 	    var url = createurl(43.613634,13.513473,43.6125,13.515142);
-	    var data = createJsonData(107139073,107139069,43.612263,13.514149)
+	    var data = createJsonData(470083847,470093743,43.612263,13.514149)
 	    var expetedLenght=7
 	    
 	    var req = createReroutingRequest(url,data)
@@ -233,13 +233,13 @@ $(function () {
 	        ok(instructions && instructions.length === expetedLenght, 'instructions: ' + _(instructions).map(formatInstruction).join(','));
 	      });
 	  });
-  
 
-  asyncTest("re-routing request - via panoramica - worst case scenario -- needs work", function () {
+
+  asyncTest("re-routing request - via panoramica - worst case scenario", function () {
 	    expect(6);
 	    var url = createurl(43.619592,13.527297,43.618881,13.523998);
-	    var data = createJsonData(471237247,137545680,43.61918,13.5255)
-	 	  var expetedLenght=4
+	    var data = createJsonData(471237247,137545680,43.619064,13.525956)
+	 	  var expetedLenght=2
 	    var req = createReroutingRequest(url,data)
 	      .done(function (json) {
 	        var info, paths, path;

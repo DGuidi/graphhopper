@@ -38,6 +38,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -997,4 +998,5 @@ public class GraphHopper implements GraphHopperAPI
     {
         return new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ").format(date);
     }
+
 }
