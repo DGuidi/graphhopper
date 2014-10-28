@@ -21,15 +21,27 @@
                 <include>NOTICE*</include>
                 <include>LICENSE*</include>
                 <include>CONTRIBUTORS*</include>
-                <include>config-example.properties</include>
+				<include>**/*.properties</include>
+				<include>test.cmd</include>
+				<include>ancona.osm</include>
+				<include>Readme_MAPAAL.txt</include>
             </includes>
         </fileSet>
         <fileSet>
             <directory>${project.build.directory}</directory>
             <outputDirectory/>
             <includes>
-                <include>*-with-dep.jar</include>
+				<include>*-with-dep.jar</include>
             </includes>
         </fileSet>
+		
+		<fileSet>
+            <directory>${project.basedir}</directory>
+            <outputDirectory/>
+            <includes>
+				 <include>**/*.properties</include>
+            </includes>
+        </fileSet>
+		
     </fileSets>
 </assembly>
