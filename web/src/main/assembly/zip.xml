@@ -43,5 +43,25 @@
             </includes>
         </fileSet>
 		
+		<fileSet>
+            <directory>${project.basedir}/../../workspace/mapaal/wrapper</directory>
+            <outputDirectory/>
+            <includes>
+				   <include>wrapper*/*</include>
+				    <include>InstallMAPAAL.bat</include>
+				    <include>MAPAAL.bat</include>
+				    <include>UninstallMAPAAL.bat</include>
+				    <include>wrapper.exe</include>
+            </includes>
+        </fileSet>
+		
+		<fileSet>
+            <directory>${project.basedir}/../../workspace/mapaal/wrapper</directory>
+            <outputDirectory>logs</outputDirectory>
+            <includes>
+				    <include>wrapper.log</include>
+            </includes>
+        </fileSet>
+		
     </fileSets>
 </assembly>
