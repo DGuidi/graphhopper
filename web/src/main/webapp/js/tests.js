@@ -1,7 +1,7 @@
 $(function () {
   var host, createDefaultRequest,createReroutingRequest, decodePath, formatCoord, formatInstruction, url, jsondata;
 
-  host = 'http://localhost:8989/';
+  host = '/';
   
   
   createurl = function(pointALat,pointALon,pointBLat,pointBLon){
