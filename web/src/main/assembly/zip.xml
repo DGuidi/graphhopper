@@ -63,5 +63,13 @@
             </includes>
         </fileSet>
 		
+		<fileSet>
+            <directory>${project.basedir}/../../workspace/mapaal/</directory>
+            <outputDirectory/>
+            <includes>
+				    <include>database*/*</include>
+            </includes>
+        </fileSet>
+		
     </fileSets>
 </assembly>
