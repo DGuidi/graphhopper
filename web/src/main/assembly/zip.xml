@@ -68,6 +68,7 @@
             <outputDirectory/>
             <includes>
 				    <include>database*/*</include>
+				    <include>doc*/*</include>
             </includes>
         </fileSet>
 		
