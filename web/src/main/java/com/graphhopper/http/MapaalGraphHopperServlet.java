@@ -56,7 +56,7 @@ public class MapaalGraphHopperServlet extends GraphHopperServlet {
 
 	private static final long serialVersionUID = 5682815885200619893L;
 	private ForbiddenEdgesRepository nodesHandler = new ForbiddenEdgesRepository();
-
+	
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException {
