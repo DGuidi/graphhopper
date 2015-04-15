@@ -5,6 +5,7 @@ import it.esalab.mapaal.http.MapaalGraphHopper;
 import it.esalab.mapaal.http.mapservices.SnappingService;
 import it.esalab.mapaal.http.parsers.JsonReportParser;
 import it.esalab.mapaal.http.repository.ForbiddenEdgesRepository;
+import it.esalab.mapaal.http.repository.Poi;
 import it.esalab.mapaal.http.repository.Report;
 
 import java.io.IOException;
@@ -13,37 +14,17 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Scanner;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpression;
-import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
 
 import com.graphhopper.GHResponse;
-import com.graphhopper.routing.Dijkstra;
-import com.graphhopper.routing.Path;
-import com.graphhopper.routing.util.EdgeFilter;
-import com.graphhopper.routing.util.FlagEncoder;
-import com.graphhopper.storage.LevelGraph;
-import com.graphhopper.util.EdgeIteratorState;
 import com.graphhopper.util.Helper;
 import com.graphhopper.util.InstructionList;
 import com.graphhopper.util.PointList;
@@ -74,14 +55,14 @@ public class MapaalGraphHopperServlet extends GraphHopperServlet {
 				JSONArray reportArray = new JSONArray(body);
 				for (int i = 0; i < reportArray.length(); i++) {
 					JSONObject jreport = reportArray.getJSONObject(0);
-					Report report = new Report("Feature", "Point", "POI");
+					Poi poi = new Poi("Feature", "Point", "POI");
+					Report report = new Report(poi);
 					JsonReportParser parser = new JsonReportParser(report);
 					report = parser.ParseReport(jreport);
-
 					long[] nodes = report.getNodes();
-					double[] gpx = report.getCoordinates();
+					double[] gpx = report.getPoi().getCoordinates();
 					if (snapper.snapReportToSingleEdge(nodes, gpx)) {
-						report.setCoordinates(gpx);
+						report.getPoi().setCoordinates(gpx);
 						report.setNodes(nodes);
 						logger.info("Correction done, new nodes: " + nodes[0]
 								+ " - " + nodes[1] + " new coordinates: "
