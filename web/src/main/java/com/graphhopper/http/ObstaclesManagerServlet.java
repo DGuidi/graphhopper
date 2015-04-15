@@ -37,8 +37,8 @@ public class ObstaclesManagerServlet extends GHBaseServlet {
 			throws ServletException, IOException {
 		boolean res = false;
 		if ("GET".equalsIgnoreCase(req.getMethod())) {
-			String mode = req.getPathInfo();
-			if(mode=="get"){
+			String mode = req.getPathInfo();		
+			if(mode.equals("/get")){
 				String id = req.getParameter("id");
 				if(id!=null){
 					Obstacle ob = obscalesHandler.getObstacle(Integer.parseInt(id));
@@ -48,13 +48,29 @@ public class ObstaclesManagerServlet extends GHBaseServlet {
 					throw new RuntimeException("Missing id Parameter");
 				}
 			}
-			else if(mode=="list"){
+			else if(mode.equals("/delete")){
+				String id = req.getParameter("id");
+				if(id!=null){
+					Obstacle ob = obscalesHandler.getObstacle(Integer.parseInt(id));
+					ob.setCancellato(true);
+					res = obscalesHandler.updateObstacle(ob);
+					JSONObject json = new JSONObject();
+					writeJson(req, resp, json);
+				}
+				else{
+					throw new RuntimeException("Missing id Parameter");
+				}
+			}
+			else if(mode.equals("/list")){
 				//fa un po schifo, mancano dei controlli decenti
 				String permanentST = req.getParameter("permanent");
-				String[] dateST = req.getParameterValues("date");
+				String dateSTraw = req.getParameter("date");
+				String[] dateST = dateSTraw.split(",");
+				
 				Timestamp[] date = {null, null};
+				String deletedST = req.getParameter("deleted");
 				try{
-				    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss.SSS");
+				    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 				    Date parsedDate = dateFormat.parse(dateST[0]);
 				    date[0] = new java.sql.Timestamp(parsedDate.getTime());
 				    parsedDate = dateFormat.parse(dateST[1]);
@@ -62,24 +78,29 @@ public class ObstaclesManagerServlet extends GHBaseServlet {
 				}catch(Exception e){
 					throw new RuntimeException("Error in parsing timestamp: "+ dateST[0]);
 				}
-				
-				String[] bounding_boxST = req.getParameterValues("bounding_box");
 				long[] bounding_box = {0,0,0,0};
-				if(bounding_boxST.length!=4){
+				String bounding_boxSTraw = req.getParameter("bounding_box");
+				if(bounding_boxSTraw==null){
 					bounding_box = null;
 				}
 				else{
+				String[] bounding_boxST = bounding_boxSTraw.split(",");
 					bounding_box[0]= Long.parseLong(bounding_boxST[0]);
 					bounding_box[1]= Long.parseLong(bounding_boxST[1]);
 					bounding_box[2]= Long.parseLong(bounding_boxST[2]);
 					bounding_box[3]= Long.parseLong(bounding_boxST[3]);
 				}
+				int disability_type= 0;
 				String disability_typeST = req.getParameter("disability_type");
+				if(disability_typeST!=null){
+					disability_type = Integer.parseInt(disability_typeST);
+				}
 				
 				boolean permanent= Boolean.parseBoolean(permanentST);
-				int disability_type = Integer.parseInt(disability_typeST);
+				boolean deleted= Boolean.parseBoolean(deletedST);
 				
-				ArrayList<Obstacle> obstacles = obscalesHandler.getObstacleList(permanent, date, bounding_box, disability_type);
+				
+				ArrayList<Obstacle> obstacles = obscalesHandler.getObstacleList(permanent, date, bounding_box, disability_type,deleted);
 
 				JSONArray ja = new JSONArray();
 				for( Obstacle ob: obstacles){
@@ -87,7 +108,7 @@ public class ObstaclesManagerServlet extends GHBaseServlet {
 				}
 				
 				JSONObject json = new JSONObject();
-				json.put("lenght", ja.length());
+				json.put("length", ja.length());
 				json.put("values", ja);
 				
 				writeJson(req, resp, json);

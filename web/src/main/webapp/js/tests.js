@@ -158,35 +158,47 @@ $(function () {
 		if(!obstacleId){
 			//NOTA: se i test non vengono eseguiti in fila faccio la select di un nodo noto
 			//se va in errore modificare l'id con l'ultimo generato dal test precedente
-			obstacleId = 1340;
+			obstacleId = 1619;
 			}
 		var url =  host + 'obstacles/get?id='+obstacleId;
 		var req =  createGetRequest(url).done(
 				function(json) {	
-					var info, cleanedRows;
 					obstacleId = json.id;
 					coordinates = json.poi.geometry.coordinates;
-					debugger;
 					console.log(json);
 					ok(obstacleId, 'obstacle inserted with id: '+ obstacleId);
-					ok(coordinates , 'obstacle coordinatese: ' + coordinates);
+					ok(coordinates , 'obstacle coordinates: ' + coordinates);
 				});
 		
 	});	
 	
-//	asyncTest("ADMIN - Get List", function() {
-//		expect(1);
-//		var url =  host + 'obstacles/list?permanent=false&date=2005-10-1,2015-12-30';
-//		var req =  createGetRequest(url).done(
-//				function(json) {	
-//					var info, cleanedRows;
-//					length = json.length;
-//					debugger;
-//					console.log(json);
-//					ok(length , 'selected: '+ length +" obstacles");
-//				});
-//		
-//	});	
+	asyncTest("ADMIN - Get List", function() {
+		expect(1);
+		var url =  host + 'obstacles/list?permanent=false&date=2005-10-1,2015-12-30';
+		var req =  createGetRequest(url).done(
+				function(json) {	
+					length = json.length;
+					console.log(json);
+					ok(length==8 , 'selected: '+ length +" obstacles, expected 8");
+				});
+		
+	});	
+	
+	asyncTest("ADMIN - Delete Obstacle", function() {
+		expect(1);
+		if(!obstacleId){
+			//NOTA: se i test non vengono eseguiti in fila faccio la select di un nodo noto
+			//se va in errore modificare l'id con l'ultimo generato dal test precedente
+			obstacleId = 1619;
+			}
+		var url =  host + 'obstacles/delete?id='+obstacleId;
+		var req =  createGetRequest(url).done(
+				function(json) {	
+					console.log(json);
+					ok(json, 'obstacle deleted with id: '+obstacleId);
+				});
+		
+	});	
 	
 	
 	asyncTest("MANTAINANCE - Repository Janitor", function() {
