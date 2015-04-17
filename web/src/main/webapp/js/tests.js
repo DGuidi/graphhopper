@@ -91,38 +91,6 @@ $(function () {
     });
   };
 
-//	decodePath = function (path) {
-//	  var encoded = path.points,
-//			len = encoded.length,
-//			index = 0,
-//			arr = [],
-//			lat = 0,
-//			lng = 0;
-//	  while (index < len) {
-//	    var b,
-//			shift = 0,
-//			result = 0;
-//	    do {
-//	      b = encoded.charCodeAt(index++) - 63;
-//	      result |= (b & 0x1f) << shift;
-//	      shift += 5;
-//	    } while (b >= 0x20);
-//	    var deltaLat = ((result & 1) ? ~(result >> 1) : (result >> 1));
-//	    lat += deltaLat;
-//
-//	    shift = 0;
-//	    result = 0;
-//	    do {
-//	      b = encoded.charCodeAt(index++) - 63;
-//	      result |= (b & 0x1f) << shift;
-//	      shift += 5;
-//	    } while (b >= 0x20);
-//	    var deltaLon = ((result & 1) ? ~(result >> 1) : (result >> 1));
-//	    lng += deltaLon;
-//	    arr.push([lng * 1e-5, lat * 1e-5]);
-//	  }
-//	  return arr;
-//	};
 
 	formatCoord = function (coord) {
 	  return coord[0].toFixed(6) + ' ' + coord[1].toFixed(6);
