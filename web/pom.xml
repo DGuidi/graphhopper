@@ -117,38 +117,6 @@
             <scope>test</scope>
         </dependency>
         -->
-        <!--
-        		<dependency>
-		  <groupId>com.google.oauth-client</groupId>
-		  <artifactId>google-oauth-client</artifactId>
-		  <version>1.18.0-rc</version>
-		</dependency>
-		<dependency>
-		  <groupId>com.google.oauth-client</groupId>
-		  <artifactId>google-oauth-client-servlet</artifactId>
-		  <version>1.18.0-rc</version>
-		</dependency>
-		<dependency>
-		  <groupId>com.google.oauth-client</groupId>
-		  <artifactId>google-oauth-client-appengine</artifactId>
-		  <version>1.18.0-rc</version>
-		</dependency>
-		<dependency>
-		  <groupId>com.google.oauth-client</groupId>
-		  <artifactId>google-oauth-client-java6</artifactId>
-		  <version>1.18.0-rc</version>
-		</dependency>
-		<dependency>
-		  <groupId>com.google.oauth-client</groupId>
-		  <artifactId>google-oauth-client-jetty</artifactId>
-		  <version>1.18.0-rc</version>
-		</dependency>
-		<dependency>
-			<groupId>com.google.http-client</groupId>
-			<artifactId>google-http-client-jackson</artifactId>
-			<version>1.15.0-rc</version>
-		</dependency>-->
-		
 		<dependency>
 	<groupId>com.restfb</groupId>
 	<artifactId>restfb</artifactId>

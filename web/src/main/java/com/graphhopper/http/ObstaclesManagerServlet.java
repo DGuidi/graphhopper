@@ -62,43 +62,39 @@ public class ObstaclesManagerServlet extends GHBaseServlet {
 				}
 			}
 			else if(mode.equals("/list")){
-				//fa un po schifo, mancano dei controlli decenti
-				String permanentST = req.getParameter("permanent");
-				String dateSTraw = req.getParameter("date");
-				String[] dateST = dateSTraw.split(",");
+				boolean permanent= Boolean.parseBoolean(req.getParameter("permanent"));
+				boolean deleted= Boolean.parseBoolean(req.getParameter("deleted"));
 				
 				Timestamp[] date = {null, null};
-				String deletedST = req.getParameter("deleted");
-				try{
-				    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-				    Date parsedDate = dateFormat.parse(dateST[0]);
-				    date[0] = new java.sql.Timestamp(parsedDate.getTime());
-				    parsedDate = dateFormat.parse(dateST[1]);
-				    date[1] = new java.sql.Timestamp(parsedDate.getTime());
-				}catch(Exception e){
-					throw new RuntimeException("Error in parsing timestamp: "+ dateST[0]);
+				String dateSTraw = req.getParameter("date");
+				if(dateSTraw!=null){
+					String[] dateST = dateSTraw.split(",");			
+					try{
+					    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+					    for(int i=0; i<2; i++){
+					    	Date parsedDate = dateFormat.parse(dateST[i]);
+						    date[i] = new java.sql.Timestamp(parsedDate.getTime());
+						}
+					}catch(Exception e){
+						throw new RuntimeException("Error in parsing timestamp: "+ dateST[0]);
+					}
 				}
+				
 				long[] bounding_box = {0,0,0,0};
 				String bounding_boxSTraw = req.getParameter("bounding_box");
-				if(bounding_boxSTraw==null){
-					bounding_box = null;
-				}
-				else{
+				if(bounding_boxSTraw!=null){
 				String[] bounding_boxST = bounding_boxSTraw.split(",");
-					bounding_box[0]= Long.parseLong(bounding_boxST[0]);
-					bounding_box[1]= Long.parseLong(bounding_boxST[1]);
-					bounding_box[2]= Long.parseLong(bounding_boxST[2]);
-					bounding_box[3]= Long.parseLong(bounding_boxST[3]);
+					for(int i=0; i<4; i++){
+						System.out.println("Count is: " + i);
+						bounding_box[i]= Long.parseLong(bounding_boxST[i]);
+					}
 				}
+				
 				int disability_type= 0;
 				String disability_typeST = req.getParameter("disability_type");
 				if(disability_typeST!=null){
 					disability_type = Integer.parseInt(disability_typeST);
 				}
-				
-				boolean permanent= Boolean.parseBoolean(permanentST);
-				boolean deleted= Boolean.parseBoolean(deletedST);
-				
 				
 				ArrayList<Obstacle> obstacles = obscalesHandler.getObstacleList(permanent, date, bounding_box, disability_type,deleted);
 

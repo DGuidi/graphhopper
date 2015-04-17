@@ -152,6 +152,18 @@ $(function () {
 		
 	});	
 	
+	asyncTest("ADMIN - Get List", function() {
+		expect(1);
+		var url =  host + 'obstacles/list?permanent=false';
+		var req =  createGetRequest(url).done(
+				function(json) {	
+					length = json.length;
+					console.log(json);
+					ok(length>=8 , 'selected: '+ length +" obstacles without date");
+				});
+		
+	});	
+	
 	asyncTest("ADMIN - Delete Obstacle", function() {
 		expect(1);
 		if(!obstacleId){
